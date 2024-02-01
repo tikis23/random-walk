@@ -9,6 +9,9 @@ float zoom = 1;
 template <typename Type>
 struct Point {
 	Type x, y;
+	float dot(const Point& other) const {
+		return x * other.x + y * other.y;
+	}
 	Point operator+(const Point& other) const {
 		return {x + other.x, y + other.y};
 	}
@@ -124,11 +127,25 @@ std::vector<Point<float>> RandomWalkFloat(size_t numIterations, Point<float> sta
 	for (size_t i = 1; i < numIterations; i++) {
 		auto p = points[i - 1];
 
-		const float r = GetRandomValueFloat(3.5f, 15.0f);
-		const float dir = GetRandomValueFloat(0, 2 * PI);
-		Point<float> offset{cosf(dir), sinf(dir)};
+		// go in same or -same direction as prev point with some rand
+		Point<float> offset;
+		if (i >= 2) {
+			const auto p2 = points[i - 2];
+			Point<float> dir = {p.x - p2.x, p.y - p2.y};
+			dir *= 1.f / sqrtf(dir.dot(dir));
+			float angle = GetRandomValueFloat(0, 2 * PI);
+			offset = {cosf(angle), sinf(angle)};
+			while (abs(dir.dot(offset)) < 0.98f) {
+				angle = GetRandomValueFloat(0, 2 * PI);
+				offset = {cosf(angle), sinf(angle)};
+			}
+		}
+		else {
+			const float dir = GetRandomValueFloat(0, 2 * PI);
+			offset = {cosf(dir), sinf(dir)};
+		}
 
-		offset *= r;
+		offset *= GetRandomValueFloat(2.5f, 7.5f);
 		p += offset;
 
 		points.push_back(p);
@@ -202,7 +219,7 @@ int main() {
 	InitWindow(windowWidth, windowHeight, "Random walk");
 	SetTargetFPS(120);
 
-	constexpr int numWalks = 5;
+	constexpr int numWalks = 7;
 	constexpr size_t numIters = 25000;
 
 	std::vector<std::vector<Point<float>>> points;
